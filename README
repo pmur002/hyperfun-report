@@ -1,0 +1,33 @@
+
++ Report on the 'hyperfun' package
+
++ Nice silly "stochastic" example:
+
+  A dice with dots located (semi)randomly on each face
+
+  See ThreeD/Testing/dice.hf for normal dice that provides
+  good examples of constructive geometry "subtraction" AND "negation"!
+
++ See ../../ThreeD/Testing/test.R for some examples,
+  including examples of hfR()
+
++ NOTE that can still hand write HyperFun code directly !
+
++ Applications to drawing 3D diagrams to explain statistical concepts ???
+
+  (cut slices from 3D probability densities ???)
+
+
++ Copyright issues
+
++ The package C/C++ code is used to build two stand-alone programs:  
+
+  hfp, which behaves much like the original HyperFun command line tool (minus
+       the GLUT display and interactivity).
+
+  hfp-client, which expects a socket connection to connect to and to
+              communicate on, either to signal complete (by sending "0") 
+              or to request a function value (by sending a function index
+              and x/y/z values, e.g., "1 -10 -10 -10" and then receiving
+              a string containing a numeric value in return).
+

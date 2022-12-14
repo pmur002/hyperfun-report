@@ -1,0 +1,1247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<html>
+<head>
+  <style type="text/css">
+    @media print {
+      body { }
+      p.img { text-align: center; page-break-inside: avoid }
+      img.CC { display: inline }
+    }
+    @media screen {
+      body { max-width: 800px; margin: auto }
+      p.img { text-align: center }
+      img.CC { display: inline }
+    }
+    p.date {
+      font-size: smaller;
+      margin: 0;
+    }
+    p.versionHistory {
+      color: gray
+    }
+    p.versionHistory a {
+      color: gray
+    }
+    p.ref {
+      text-indent: -2em;
+      padding-left: 2em;
+    }
+    p.fig {
+      text-align: left;
+    }
+    p.fig img, img.plot {
+      box-shadow: 10px 10px 20px;
+      margin-top: 10px;
+      margin-bottom: 20px;      
+    }
+  </style>
+  <style type="text/css">
+    td { padding: 5 }
+  </style>
+  <script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']]
+  }
+};
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+  </script>
+  <title>Constructive Solid Geometry and Function Representation in R</title>
+</head>
+<body>
+  <h1>Constructive Solid Geometry and Function Representation in R</h1>
+  <p>
+    <span style="font-style: italic">by Paul Murrell</span>
+    <a href="http://orcid.org"><img alt="" src="https://www.stat.auckland.ac.nz/~paul/ORCID/ORCiD.png" style="width: 16px; height: 16px; vertical-align: middle" /></a> <span style="font-family: mono; font-size: small"><a href="http://orcid.org/0000-0002-3224-8858">http://orcid.org/0000-0002-3224-8858</a></span>
+    <span style="font-style: italic">and Jack Wong</span>
+  </p>
+  <p class="date">
+    Version 1:  
+    <rcode echo="FALSE" results="asis"><![CDATA[
+cat(format(Sys.Date(), "%A %d %B %Y"))
+    ]]></rcode>
+  </p>
+
+  <rcode id="init" echo="FALSE" message="FALSE" results="hide"><![CDATA[
+opts_chunk$set(comment=" ", tidy=FALSE, 
+               dev="png", ## dev="svg",
+               dpi=96)
+options(width=100)
+## For wonky desktop set up
+options(bitmapType="cairo")
+  ]]></rcode>
+  <rcode echo="FALSE" message="FALSE"><![CDATA[
+    library(grid)
+  ]]></rcode>
+
+  <hr/>
+  <p>
+    <a rel="license"
+    href="http://creativecommons.org/licenses/by/4.0/"><img class="CC"
+    alt="Creative Commons License" style="border-width:0"
+    src="https://i.creativecommons.org/l/by/4.0/88x31.png"/></a><br/><span
+    xmlns:dct="http://purl.org/dc/terms/"
+    property="dct:title">This document</span>
+    by <span xmlns:cc="http://creativecommons.org/ns#"
+    property="cc:attributionName">Paul
+    Murrell</span> is licensed under a <a rel="license"
+    href="http://creativecommons.org/licenses/by/4.0/">Creative
+    Commons Attribution 4.0 International License</a>.
+  </p>
+  <hr/>
+  <p>
+    The HyperFun Project provides a language and interpreter 
+    for describing 3D scenes using Function Representation
+    and Constructive Solid Geometry.
+    This document describes the R package 'hyperfun', which
+    provides an interface to the
+    HyperFun language and interpreter.
+  </p>
+
+  <toc/>
+
+  <h2><a name="intro">Introduction</a></h2>
+
+  <p>
+    Constructive solid geometry (CSG) is a technique for creating complex
+    three-dimensional shapes by combining simple three-dimensional
+    shapes.  For example, the shape shown on the right (below) is a complex
+    shape that would be difficult to describe directly, but is
+    easily produced
+    by "subtracting" the simple sphere shown in the middle from the simple 
+    cube shown on the left.
+  </p>
+  <rcode echo="FALSE" warning="FALSE"><![CDATA[
+library(hyperfun)
+library(rgl)
+r3dDefaults <- rgl::r3dDefaults
+r3dDefaults$material$color <- "lightsteelblue"
+r3dDefaults$material$specular <- "black"
+options(rgl.useNULL=TRUE)
+  ]]></rcode>
+  <rcode echo="FALSE"><![CDATA[
+rglImage <- function(model, name, obs = NULL, ...) {
+    clear3d()
+    view3d(30, 30)
+    if (!is.null(obs))
+        observer3d(0, 0, obs, auto=FALSE)
+    hfp(model, ...)
+    snapshot3d(file.path("figure", paste0(name, ".png")), webshot=TRUE)
+    ## rglwidget(snapshot=FALSE, webgl=TRUE)
+}
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+sphere <- hfSphere(r=7)
+cube <- hfBlock(dx=12, dy=12, dz=12)
+rglImage(cube, name="cube", obs=30)
+rglImage(sphere, name="sphere", obs=30)
+rglImage(cube - sphere, name="csg", obs=30)
+  ]]></rcode>
+  <p>
+    <img src="figure/cube.png" alt="A cube"/>
+    <img src="figure/sphere.png" alt="A sphere"/>
+    <img src="figure/csg.png" alt="A cube minus a sphere"/>
+  </p>
+
+  <p>
+    The <a href="https://hyp31
+erfun.org/hyperfun/main">HyperFun project</a> 
+    (<a href="#HyperFunProject"/>) 
+    defines a language for describing and combining
+    simple shapes and provides a program, <code>hfp</code>, which is an
+    interpreter for the HyperFun language and a viewer for the resulting
+    three-dimensional image.  For example, the following HyperFun code describes
+    a sphere (centred at the origin, with a radius of 7), a cube (centred at the
+    origin, with a width, height, and depth of 12), 
+    and an overall <strong>model</strong> that
+    consists of the sphere subtracted from the cube.
+  </p>
+  <rcode echo="FALSE"><![CDATA[
+cat(readLines("csg.hf"), sep="\n")
+  ]]></rcode>
+  <p>
+    If the code above is saved in a file called <code>csg.hf</code>,
+    the following command runs the code and opens a window
+    to view the resulting image.
+  </p>
+  <pre>
+hfp csg.hf
+  </pre>
+  <p>
+    <img src="hfp-csg.png" alt="hfp view of csg.hf"/>
+  </p>
+  <p>
+    The 'hyperfun' package provides an R interface to HyperFun
+    so that R users can write idiomatic R code to generate, and view,
+    complex three-dimensional shapes using the HyperFun system.  For example,
+    the following R code describes a sphere (with a radius of 7), a cube (with
+    width, height, and depth of 12), and creates a model consisting of
+    the sphere subtracted from the cube.  
+  </p>
+  <rcode><![CDATA[
+library(hyperfun)
+  ]]></rcode>
+  <rcode results="hide"><![CDATA[
+sphere <- hfSphere(r = 7)
+cube <- hfBlock(dx = 12, dy = 12, dz = 12)
+model <- cube - sphere
+  ]]></rcode>
+  <p>
+    The <code>hfp()</code> function calls the HyperFun program <code>hfp</code>
+    to calculate the resulting image and then
+    draws the image using the 'rgl' package (<a href="pkg:rgl"/>).
+  </p>
+  <rcode eval="FALSE"><![CDATA[
+hfp(model)
+  ]]></rcode>
+  <p>
+    <img src="figure/csg.png" alt="The cube 'minus' the sphere"/>
+  </p>
+  <p>
+    Clearly, the headline act in this drama is the HyperFun system.  However, 
+    the 'hyperfun' package makes three useful contributions:
+  </p>
+  <ol>
+    <li>
+      <p>
+        Easy and familiar access to HyperFun for R users.
+      </p>
+      <p>
+        The convenience of the R packaging system means that the
+        'hyperfun' package is an easy way for R users to 
+        install and run HyperFun across multiple platforms.
+      </p>
+    </li>
+    <li>
+      <p>
+        A convenient and familiar interface to HyperFun for R users.
+      </p>
+      <p>
+        The 'hyperfun' package allows R users to write R code to 
+        create HyperFun models;  they do not have to learn the 
+        HyperFun language.
+      </p>
+      <p>
+        The Section on <a href="#hyperfun"/> gives an overview of the
+        R functions provided by the 'hyperfun' package for creating
+        HyperFun models.
+      </p>
+    </li>
+    <li>
+      <p>
+        An extension of HyperFun to include R functions.
+      </p>
+      <p>
+        The 'hyperfun' package provides an <code>hfR()</code> function
+        so that HyperFun objects can be defined using
+        R functions.  This access to R makes it possible to express
+        a much wider range of HyperFun models than is possible with
+        the original HyperFun language.
+      </p>
+      <p>
+        The Section on <a href="#frep"/> describes this extension
+        of HyperFun in more detail.
+      </p>
+    </li>
+  </ol>
+
+
+  <h2><a name="hyperfun">The 'hyperfun' package</a></h2>
+  <p>
+    In basic usage of the 'hyperfun' package, we only need to make
+    use of functions that define objects (three-dimensional shapes)
+    and operators that can be used to combine objects.
+  </p>
+
+  <h2>3D objects</h2>
+  <p>
+    We have already seen two functions that define objects, 
+    <code>hfSphere()</code> for spheres and <code>hfBlock()</code>
+    for rectanguloid objects.  In both cases, there are arguments
+    to control the placement and size of the objects.
+    For example, the following code defines a sphere centred at
+    (0, 0, 0), with radius 7.
+  </p>
+  <rcode><![CDATA[
+sphere <- hfSphere(cx = 0, cy = 0, cz = 0, r = 7)
+  ]]></rcode>
+
+  <p>
+    The <code>print()</code> method for objects shows the HyperFun code
+    that the object generates and the <code>hfp()</code> function
+    draws the object in an 'rgl' window.
+  </p>
+  <rcode><![CDATA[
+sphere
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(sphere)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(sphere, "hfSphere")
+  ]]></rcode>
+  <p>
+    <img src="figure/hfSphere.png" alt="a single sphere"/>
+  </p>
+
+  <p>
+    The following table lists the shapes that are currently available
+    in 'hyperfun', along with the relevant function and sample output.
+  </p>
+  <table>
+    <tr style="background-color: #EEEEEE">
+      <td>Rectanguloid</td>
+      <td width="150"><pre>hfBlock(x, y, z, dx, dy, dz, jx, jy, jz)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfBlock(dx=10, dy=10, dz=10), "hfBlock")
+        ]]></rcode>
+        <img src="figure/hfBlock.png" width="100"/>
+      </td>
+      <td><code>jx</code> is justification (0 to 1).</td>
+    </tr>
+    <tr>
+      <td>Sphere</td>
+      <td><pre>hfSphere(cx, cy, cz, r)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfSphere(r=5), "hfSphere")
+        ]]></rcode>
+        <img src="figure/hfSphere.png" width="100"/>
+      </td>
+    </tr>
+    <tr style="background-color: #EEEEEE">
+      <td>Ellipsoid</td>
+      <td><pre>hfEllipsoid(cx, cy, cz, a, b, c)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfEllipsoid(a=5, b=3, c=1), "hfEllipsoid")
+        ]]></rcode>
+        <img src="figure/hfEllipsoid.png" width="100"/>
+      </td>
+      <td><code>a</code> is length of semi-axis in X dimension.</td>
+    </tr>
+    <tr>
+      <td>Cylinder</td>
+      <td><pre>hfCylinder(cx, cy, cz, r, axis)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfCylinder(r=5, axis="Z"), "hfCylinder")
+        ]]></rcode>
+        <img src="figure/hfCylinder.png" width="100"/>
+      </td>
+      <td><code>axis</code> specifies the cone axis, e.g., <code>"X"</code>.</td>
+    </tr>
+    <tr style="background-color: #EEEEEE">
+      <td>Elliptic cylinder</td>
+      <td><pre>hfEllCylinder(cx, cy, cz, a, b, axis)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfEllCylinder(a=5, b=2, axis="Z"), "hfEllCylinder")
+        ]]></rcode>
+        <img src="figure/hfEllCylinder.png" width="100"/>
+      </td>
+      <td>See meaning of parameters for cones and ellipsoids.</td>
+    </tr>
+    <tr>
+      <td>Cone</td>
+      <td><pre>hfCone(cx, cy, cz, r, axis)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfCone(r=1, axis="Y"), "hfCone")
+        ]]></rcode>
+        <img src="figure/hfCone.png" width="100"/>
+      </td>
+      <td><code>r</code> is cone radius at height 1.</td>
+    </tr>
+    <tr style="background-color: #EEEEEE">
+      <td>Elliptic cone</td>
+      <td><pre>hfEllCone(cx, cy, cz, a, b, axis)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfEllCone(a=1, b=.5, axis="Y"), "hfEllCone")
+        ]]></rcode>
+        <img src="figure/hfEllCone.png" width="100"/>
+      </td>
+      <td>See meaning of parameters for cones and ellipsoids.</td>
+    </tr>
+    <tr>
+      <td>Torus</td>
+      <td><pre>hfTorus(cx, cy, cz, R, r0, axis)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfTorus(R=5, r0=1, axis="Y"), "hfTorus")
+        ]]></rcode>
+        <img src="figure/hfTorus.png" width="100"/>
+      </td>
+      <td><code>R</code> is radius of revolution; <code>r0</code> is radius of disk.</td>
+    </tr>
+    <tr style="background-color: #EEEEEE">
+      <td>Super ellipsoid</td>
+      <td><pre>hfSuperEll(cx, cy, cz, a, b, c, s1, s2)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfSuperEll(a=5, b=3, c=1, s1=.5, s2=2), "hfSuperEll")
+        ]]></rcode>
+        <img src="figure/hfSuperEll.png" width="100"/>
+      </td>
+      <td><code>s1</code> controls "sharpness" in z-direction; 
+          <code>s2</code> controls "sharpness" in xy-direction.</td>
+    </tr>
+    <tr>
+      <td>Blobby object</td>
+      <td><pre>hfBlobby(x0, y0, z0, a0, b0, T)</pre></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hfBlobby(c(-3, 0, 3), a0=1, b0=7, T=.1), "hfBlobby")
+        ]]></rcode>
+        <img src="figure/hfBlobby.png" width="100"/>
+      </td>
+      <td><code>x0</code> specifies X centres of blobs; 
+          <code>a0</code> and 
+          <code>b0</code> and
+          <code>T</code> control how connected the blobs are.</td>
+    </tr>
+    <!--
+    <tr>
+      <td></td>
+      <td><code>hf()</code></td>
+      <td>
+        <rcode echo="FALSE" results="hide" fig.width="1" fig.height="1"><![CDATA[
+rglImage(hf(dx=10, dy=10, dz=10), "")
+        ]]></rcode>
+        <img src="figure/.png" width="100"/>
+      </td>
+    </tr>
+    -->
+  </table>
+
+  <h2>3D operators</h2>
+  <p>
+    Objects can be combined using arithmetic and logical operators.
+    For example, the following code subtracts an inverted sphere from a cube;
+    rather than carving a hole out of the centre of the cube, this
+    chops the corners off the cube.
+    Again, the <code>print()</code> method shows the corresponding HyperFun code
+    and <code>hfp()</code> draws the resulting image.
+  </p>
+  <rcode><![CDATA[
+model <- cube - !sphere
+model
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(model)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(model, "model")
+  ]]></rcode>
+  <p>
+    <img src="figure/model.png" alt="a single sphere"/>
+  </p>
+  <p>
+    The list below shows the set of available operators:
+  </p>
+  <ul>
+    <li>
+      The <code>|</code> operator (vertical bar; logical or)
+      produces the union of two objects.
+    </li>
+    <li>
+      The <code>&amp;</code> operator (ampersand; logical and) 
+      produces the intersection of two objects.
+    </li>
+    <li>
+      The <code>-</code> operator (minus) subtracts one object from another.
+    </li>
+    <li>
+      The <code>!</code> operator (exclamation; logical not) 
+      inverts an object so that the interior of the
+      object becomes its exterior.
+    </li>
+    <!--
+    <li>
+      <code>*</code> produces the cartesian product of two objects.
+    </li>
+    -->
+  </ul>
+
+  <h3>Vectorised 3D objects</h3>
+  <p>
+    The arguments to functions that define objects,
+    like <code>hfSphere()</code> and <code>hfBlock()</code>,
+    can be vectors, so it is easy to define 
+    several objects at once.  For example, the following code
+    defines eight spheres arranged in a circle.
+  </p>
+  <rcode><![CDATA[
+t <- seq(0, 2*pi, length.out=9)[-1]
+x <- 7*cos(t)
+z <- 7*sin(t)
+spheres <- hfSphere(cx = x, cz = z, r = 2)
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(spheres)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(spheres, "spheres")
+  ]]></rcode>
+  <p>
+    <img src="figure/spheres.png" alt="several spheres arranged in a circle"/>
+  </p>
+
+  <h3>The <code>hfp()</code> function</h3>
+  <p>
+    The spheres in the image above 
+    are quite coarse;  there are
+    fewer facets on each of the spheres.
+    We can provide arguments to the <code>hfp()</code> function
+    to increase the resolution of the final image.
+    For example, the following code draws the multiple spheres using
+    a higher <code>density</code> value (the default is 30),
+    which produces much smoother spheres.
+  </p>
+  <rcode eval="FALSE"><![CDATA[
+hfp(spheres, density = 100)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(spheres, "spheres-hires", density = 100)
+  ]]></rcode>
+  <p>
+    <img src="figure/spheres-hires.png" 
+         alt="several high-resolution spheres arranged in a circle"/>
+  </p>
+  <p>
+    Another parameter that affects the final image is the <em>bounding
+    box</em> used by the HyperFun system.  There is a <code>bbox</code> argument
+    to <code>hfp()</code> to control this bounding box.
+    For example, the following code draws the multiple spheres again,
+    but with a bounding box that cuts the spheres in half.
+    The default bounding box has limits from -10 to 10 in each dimension,
+    but this code sets the limits in the y-dimension from -5 to 0.
+  </p>
+  <rcode eval="FALSE"><![CDATA[
+hfp(spheres, density = 100, bbox = c(-10, -5, -10, 10, 0, 10))
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(spheres, "spheres-bbox", density = 100, bbox = c(-10, -5, -10, 10, 0, 10))
+  ]]></rcode>
+  <p>
+    <img src="figure/spheres-bbox.png" 
+         alt="several high-resolution spheres arranged in a circle and trimmed by a smaller bounding box"/>
+  </p>
+  <p>
+    By default, <code>hfp()</code> function
+    draws the final image in an 'rgl' window, but we can instead
+    produce an output file if we specify a <code>format</code> value.
+    For example, the following code generates an 
+    <a href="https://en.wikipedia.org/wiki/STL_(file_format)">STL file</a>;
+    possible formats are <code>"stl"</code> for STL, 
+    <code>"stlb"</code> (STLB; binary STL), <code>"pov"</code> 
+    (<a href="https://en.wikipedia.org/wiki/POV-Ray">POV-Ray</a>), 
+    <code>"cli"</code> 
+    (<a href="https://www.hmilch.net/downloads/cli_format.html">CLI</a>), 
+    and <code>"wrl"</code> 
+    (<a href="https://en.wikipedia.org/wiki/VRML">VRML</a>).
+    The default format that draws on screen is <code>"rgl"</code>.
+  </p>
+  <rcode results="hide"><![CDATA[
+stlFile <- hfp(hfSphere(), format="stl")
+  ]]></rcode>
+  <p>
+    The name of the STL file that is generated 
+    is returned by <code>hfp()</code>.
+  </p>
+  <rcode><![CDATA[
+stlFile
+  ]]></rcode>
+
+  <p>
+    Any further arguments are passed to <code>rgl::readSTL()</code>
+    (if <code>format="rgl"</code>).  For example, the following code
+    specifies a surface colour and a specular colour for rendering.
+  </p>
+  <rcode eval="FALSE"><![CDATA[
+hfp(hfSphere(), color="blue", specular="black")
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(hfSphere(), "sphere-color", density=100, color="blue", specular="black")
+  ]]></rcode>
+  <p>
+    <img src="figure/sphere-color.png" 
+         alt="a coloured sphere"/>
+  </p>
+
+  <h3>The <code>hfModel()</code> function</h3>
+  <p>
+    When we combine objects using one of the arithmetic or logical operators,
+    the result is a <em>model</em>.  
+    We can also explicitly create a model using the <code>hfModel()</code>
+    function, which takes one or more objects and an operator to combine them. 
+    For example, the following two expressions produce exactly
+    the same result.
+  </p>
+  <rcode results="hide"><![CDATA[
+cube - sphere
+hfModel(cube, sphere, op="-")
+  ]]></rcode>
+  <p>
+    A model can also consist just of a single object, as shown below.
+  </p>
+  <rcode><![CDATA[
+hfModel(cube)
+  ]]></rcode>
+  <p>
+    When we define multiple objects at once and create a model
+    that combines those multiple objects
+    with another object, the multiple objects are first "reduced" to
+    a single model that consists of the union of the multiple objects.
+    For example, the following code subtracts the cube from earlier examples
+    from the eight
+    spheres.  The eight spheres are first "reduced" to the union
+    of the eight spheres and then the cube is substracted.
+  </p>
+  <rcode eval="FALSE"><![CDATA[
+hfp(spheres - cube, density = 100)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(spheres - cube, "spheres-reduced", density = 100)
+  ]]></rcode>
+  <p>
+    <img src="figure/spheres-reduced.png" 
+         alt="several high-resolution spheres arranged in a circle with a cube subtracted from them"/>
+  </p>
+  <p>
+    If we want to reduce multiple objects to a single model using 
+    a different operator, we can use the <code>hfModel()</code>
+    function.  For example, the following code draws two spheres
+    that overlap with each other.
+  </p>
+  <rcode><![CDATA[
+twoSpheres <- hfSphere(c(-2, 2), c(0, 1), c(0, 1), r=2.5)
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(twoSpheres)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(twoSpheres, "two-spheres", density = 100)
+  ]]></rcode>
+  <p>
+    <img src="figure/two-spheres.png" 
+         alt="two spheres that overlap"/>
+  </p>
+  <p>
+    The following code uses the <code>-</code> (minus) operator to reduce
+    the multiple spheres, which leaves one sphere with a bite taken out of
+    it (or a "death star" if you are that way inclined).  
+  </p>
+  <rcode><![CDATA[
+spheresMinus <- hfModel(twoSpheres, op="-")
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(spheresMinus)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(spheresMinus, "spheres-sub", density = 100)
+  ]]></rcode>
+  <p>
+    <img src="figure/spheres-sub.png" 
+         alt="several high-resolution spheres arranged in a circle reduced by subtraction"/>
+  </p>
+  <p>
+    The <code>hfModel()</code> function can also be used 
+    to combine more than two objects or models at once.
+    For example, the following code subtracts our original 
+    sphere from our original cube and then also
+    subtracts the circle of smaller spheres from the result.
+  </p>
+  <rcode><![CDATA[
+threesome <- hfModel(cube, sphere, spheres, op="-")
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(threesome)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(threesome, "threesome", density = 100)
+  ]]></rcode>
+  <p>
+    <img src="figure/threesome.png" 
+         alt="a cube minus a sphere minus several smaller spheres arranged in a circle"/>
+  </p>
+
+  <h3>Evaluating raw HyperFun code</h3>
+  <p>
+    We can give the <code>hfp()</code> function a character vector as
+    the first argument, in which case the character values are assumed to be raw
+    HyperFun code.  The character values are evaluated using 
+    <code>hfp</code> and the result is drawn with 'rgl'.
+    For example, suppose we have a character vector called
+    <code>hfCode</code> that contains the raw HyperFun code from the
+    very first example in the introduction.
+  </p>
+  <rcode echo="FALSE"><![CDATA[
+hfCode <- readLines("csg.hf")
+w <- getOption("width")
+options(width = nchar(hfCode[3]) + 4)
+  ]]></rcode>
+  <rcode><![CDATA[
+hfCode
+  ]]></rcode>
+  <rcode echo="FALSE"><![CDATA[
+options(width = w)
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(hfCode)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(hfCode, "csg-char")
+  ]]></rcode>
+  <p>
+    <img src="figure/csg-char.png" 
+         alt="a cube minus a sphere"/>
+  </p>
+  
+  <p>
+    We can also provide just a single character value as the first
+    argument to <code>hfp()</code>, in which case the value is 
+    interpreted as the name of a file that contains HyperFun code.
+    For example, the following code produces the same sphere result.
+  </p>
+  <rcode><![CDATA[
+writeLines(hfCode, "csg.hf")
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp("csg.hf")
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage("csg.hf", "csg-direct")
+  ]]></rcode>
+  <p>
+    <img src="figure/csg-direct.png" 
+         alt="a cube minus a sphere"/>
+  </p>
+
+
+  <h2><a name="frep">Function representation</a></h2>
+  <p>
+    All of the HyperFun examples so far have made use 
+    of predefined HyperFun functions such as <code>hfSphere()</code>
+    and <code>hfBlock()</code>.  These predefined functions are known as the 
+    <em>FRep library</em>.
+    However, this FRep library is actually just a convenience layer on top
+    of a much more general and powerful idea:  <em>Function Representation</em>
+    (FRep).
+  </p>
+  <p>
+    In the HyperFun system, a three-dimensional
+    solid is defined by a function of three variables (x, y, z);
+    conceptually, the function is evaluated at all values of
+    (x, y, z) and regions that produce a 
+    negative value are inside the solid, regions that produce a 
+    positive values are
+    outside the solid, and the boundary, where the function returns
+    zero, defines the surface of the solid.
+    For example, the following HyperFun code defines a 
+    paraboloid.
+    For any (x, y, z) coordinate, the model returns y minus the sum
+    of half-x squared and half-z squared.  This creates a 
+    surface wherever that expression is zero, which
+    describes the paraboloid $y = (x/2)^2 + (z/2)^2$.
+  </p>
+  <rcode echo="FALSE"><![CDATA[
+cat(readLines("paraboloid.hf"), sep="\n")
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage("paraboloid.hf", "paraboloid-direct")
+  ]]></rcode>
+  <p>
+    <img src="figure/paraboloid-direct.png" 
+         alt="a paraboloid"/>
+  </p>
+
+  <h3>The <code>hfR()</code> function</h3>
+  <p>
+    The 'hyperfun' package provides functions such as
+    <code>hfSphere()</code> and <code>hfBlock()</code> that correspond to 
+    functions in the HyperFun FRep library.  In addition,
+    the 'hyperfun' package provides an <code>hfR()</code>
+    function that allows the user to define a HyperFun object in terms
+    of an R function.  
+    The argument to <code>hfR()</code>
+    is a function that should accept a single argument, which is a 
+    numeric vector of three values, and it should return a single
+    numeric value.  
+  </p>
+  <p>
+    This means that with 'hyperfun' 
+    we can express three-dimensional objects using FRep, 
+    by writing an R function.
+    For example, the following code
+    defines a paraboloid.  
+  </p>
+  <rcode><![CDATA[
+f <- function(xyz) xyz[2] - (xyz[1]/2)^2 - (xyz[3]/2)^2
+paraboloid <- hfR(f)
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(paraboloid)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(paraboloid, "parabola-R")
+  ]]></rcode>
+  <p>
+    <img src="figure/parabola-R.png" 
+         alt="a paraboloid"/>
+  </p>
+
+  <p>
+    The downside to using <code>hfR()</code> is that the R function
+    gets evaluated many times for many different xyz values, so this
+    is slower than coding directly in HyperFun.
+    On the other hand, being able to write an R function means 
+    that we have access to the full generality of the R language
+    and all of its extension packages.  This 
+    greatly expands the sort of surface that we can easily express
+    in FRep.  
+    For example, the following code draws a multivariate normal surface.
+  </p>
+  <rcode><![CDATA[
+library(mvtnorm)
+mvnorm <- hfR(function(xyz) xyz[2] - 20*dmvnorm(sqrt(sum((xyz[c(1, 3)]/2)^2))))
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(mvnorm)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(mvnorm, "mvnorm")
+  ]]></rcode>
+  <p>
+    <img src="figure/mvnorm.png" 
+         alt="a multivariate normal surface"/>
+  </p>
+  <p>
+    The <code>hfR()</code> function also provides an easier way
+    for users to extend the FRep library.  Adding a new shape to
+    the FRep library itself requires writing C code and compiling a
+    new version of <code>hfp</code>.  With <code>hfR()</code>,
+    and the general extensible nature of R,
+    users are able to write their own <code>hf*()</code> function
+    and share it with others easily.
+    For example, the following code defines 
+    a new <code>hfParaboloid()</code> function with parameters to
+    control the curvature in both x and z dimensions.
+  </p>
+  <rcode><![CDATA[
+hfParaboloid <- function(a = 1, b = 1) {
+    f <- function(xyz) {
+        xyz[2] - sign(a)*(xyz[1]/a)^2 - sign(b)*(xyz[3]/b)^2 
+    }
+    hfR(f)
+}
+  ]]></rcode>
+  <p>
+    With that function defined, anyone can easily create a variety
+    of paraboloids.  For example, the following code draws 
+    a saddle-shaped paraboloid.
+  </p>
+  <rcode><![CDATA[
+saddle <- hfParaboloid(2, -2)
+  ]]></rcode>
+  <rcode eval="FALSE"><![CDATA[
+hfp(saddle)
+  ]]></rcode>
+  <rcode echo="FALSE" results="hide"><![CDATA[
+rglImage(saddle, "saddle")
+  ]]></rcode>
+  <p>
+    <img src="figure/saddle.png" 
+         alt="a saddle paraboloid"/>
+  </p>
+
+  <h2><a name="applications">Applications</a></h2>
+  <p>
+    The 'hyperfun' package is useful for describing 3D objects
+    in R.  The ability to describe an object using FRep and the
+    ability to describe an object in terms of 
+    intersections and unions of other objects makes it easier to 
+    describe more complex 3D objects.  But what use are 3D objects
+    in R?  The established guidelines for data visualisations
+    (<a href="#cleveland-elements"/>;
+    <a href="#cleveland-vis"/>; <a href="#Ware12"/>) advise against the use 
+    of 3D objects to convey information from data.  Are there
+    any valid (statistical [graphics]) applications for 3D objects in R?
+  </p>
+  <p>
+    One possible application is statistical diagrams
+    to help explain mathematical algorithms.
+    For example, the diagram below might be used to help visualise
+    the solution space based on a set of three linear constraints.
+    The planes representing the linear constraints can be expressed
+    mathematically using FRep
+    and the solution space is naturally expressed by intersecting
+    the three planes using CSG.
+  </p>
+  <p>
+    <img src="diagram.png" width="400"
+         alt="3D image showing the intersection of three linear inequalities"/>
+  </p>
+
+  <h2><a name="discussion">Discussion</a></h2>
+
+  <p>
+    The HyperFun Project provides a language and interpreter
+    for describing 3D scenes that is very powerful and convenient
+    because it harnesses both FRep and CSG.
+    However, there are several limitations:
+  </p>
+  <ul>
+    <li>
+      <p>
+        The HyperFun language has limitations. For example,
+        it supports mathematical functions like <code>sqrt</code>,
+        <code>log</code>, and <code>sin</code>, but only a small set
+        of such functions.
+      </p>
+    </li>
+    <li>
+      <p>
+        The FRep library is difficult to extend.  Adding new FRep functions
+        requires writing C code and recompiling 
+        the HyperFun interpreter.
+      </p>
+    </li>
+    <li>
+      <p>
+        The official HyperFun web site, <code>hyperfun.org</code>,
+        has been abandoned.  A copy of the web site
+        is still available at <a href="http://paulbourke.net/dataformats/hyperfun/">http://paulbourke.net/dataformats/hyperfun/</a>,
+        but that is also a little out of date and does not contain
+        as many examples of HyperFun programs as the official web site had.
+        On the other hand, the HyperFun source code is still available from 
+        <a href="https://sourceforge.net/projects/hyperfun/">SourceForge</a>.
+      </p>
+    </li>
+  </ul>
+  <p>
+    The 'hyperfun' package for R provides an easy way (for R users)
+    to access, install,
+    and run the HyperFun interpreter.  It also provides a 
+    convenient interface (for R users) to generate 3D models
+    in the HyperFun language.  Furthermore, the 'hyperfun' package,
+    with its <code>hfR()</code> function,
+    provides a generalised extension mechanism for the HyperFun 
+    language.  We can describe 3D shapes using FRep
+    simply by writing R functions.  This combines the full power, flexibility,
+    and extensibility of R with the HyperFun Project.
+  </p>
+
+  <h3>Resolution and speed</h3>
+  <p>
+    The description of a 3D model in HyperFun code is a pure,
+    typically continuous, mathematical
+    description.
+    However, the generation of 3D output from a HyperFun model, 
+    whether on screen or by writing to
+    an external file, involves the construction of a finite polygon mesh
+    from the HyperFun model.
+    The HyperFun interpreter constructs a polygon mesh by evaluating
+    the HyperFun model at locations on a regular grid in
+    3D space.  The bounds of this grid are controlled by the
+    <code>bbox</code> argument to the <code>hfp()</code> function and
+    the resolution of the grid is controlled by the 
+    <code>density</code> argument.
+  </p>
+  <p>
+    Some care is required to make sure that the resolution of the
+    regular grid is sufficiently high to capture all details of
+    3D objects.  Even something as simple as a plane can disappear 
+    in the final rendering
+    if the plane is aligned with one of the main axes, but is not
+    aligned with the regular grid.
+  </p>
+  <p>
+    Generating 3D output requires at least one 
+    evaluation for each model at each location on the regular grid, so
+    more complex models, involving more 3D objects, and higher resolution
+    scenes require a larger number of evaluations.
+    More evaluations means a longer run time and the increase is 
+    roughly linear in terms of number of 3D objects and cubic in terms
+    of grid density, as shown in the plots below.
+  </p>
+  <rcode echo="FALSE" eval="FALSE"><![CDATA[
+nobj <- c(1, 5, 10, 15)  ## Must be odd values
+dens <- seq(50, 200, 50)
+cond <- expand.grid(nobj=nobj, dens=dens)
+timer <- function(condition) {
+    n <- condition["nobj"]
+    noff <- (n - 1)/2
+    system.time(hfp(hfSphere(seq(-noff, noff, length.out=n)),
+                    density=condition["dens"],
+                    format="stl"))[1]
+}
+times <- apply(cond, 1, timer)
+cond$times <- times
+saveRDS(cond, "timings.rda")
+  ]]></rcode>
+  <rcode echo="FALSE" fig.width="5" fig.height="5"><![CDATA[
+timings <- readRDS("timings.rda")
+library(lattice)
+trellis.par.set("superpose.symbol", list(pch=16))
+xyplot(times ~ nobj, timings, groups=timings$dens, type="b", 
+       xlab="number of objects", ylab="time (seconds)", 
+       auto.key=list(title="density", cex.title=1, columns=4))
+xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
+       xlab="density", ylab="time (seconds)",
+       auto.key=list(title="number of objects", pch=16, cex.title=1, columns=4))
+  ]]></rcode>
+
+  <h3>Related work</h3>
+  <!--
+  <p>
+    NOTE that rgl::shapelist3d() claims to be
+    "a quick way to create a complex object made up of simpler ones",
+    but it is really just a way to generate a "vector" of objects
+    and draw them all at once - there is no "constructive solid
+    geometry" involved (as far as I can tell).
+    There is also rgl::merge(), but again this is at best
+    a "union" of multiple shapes.
+    NOTE that there are also rgl::extrude3d() and rgl::turn3d(),
+    but these are complementary to CSG.
+  </p>
+  -->
+  <p>
+    The HyperFun Project is not the only system that provides CSG and/or FRep.
+    However, because the HyperFun source is distributed as 
+    part of the 'hyperfun' package, and because it is relatively
+    easy to translate R expressions (like <code>hfSphere()</code>)
+    into the HyperFun language
+    and to integrate R expressions with the HyperFun language (via
+    the <code>hfR()</code> function),
+    the 'hyperfun' package provides a nice low-dependency, high-level
+    interface for working with CSG and FRep.
+  </p>
+  <p>
+    Several R packages provide interfaces to much larger and more complex
+    3D graphics systems, though these tend to be lower level
+    and even if they provide CSG they do not
+    support FRep.  For example, the 'rgl' package
+    provides an interface to 
+    <a hfref="https://en.wikipedia.org/wiki/OpenGL">OpenGL</a> and the 
+    'Rvcg' package (<a href="#pkg:rvcg"/>) 
+    provides an interface to the 
+    <a href="https://github.com/cnr-isti-vclab/vcglib">VCG computer graphics library</a>.
+    There are also several packages that provide at least limited
+    interfaces to the <a href="https://www.cgal.org/">CGAL graphics library</a>:
+    'cgalMesh' (<a href="#pkg:cgalmesh"/>), 
+    'MeshesTools' (<a href="#pkg:meshtools"/>),
+    and 'PolygonSoup' (<a href="#pkg:polygonsoup"/>).
+  </p>
+  <p>
+    There are other computer graphics libraries that provide both
+    CSG and FRep, for example, <a href="https://libfive.com/">libfive</a>
+    and <a href="https://implicitcad.org/">ImplicitCAD</a>.
+    These are both more modern than HyperFun and creating an R interface
+    could be worth exploring, particularly for ImplicitCAD;
+    an interface for libfive may require more effort due to the
+    lower-level nature of the library. 
+  </p>
+  <!--
+  <p>    
+    https://laustep.github.io/stlahblog/posts/cgalMeshes.html
+    https://github.com/stla/cgalMeshes
+    which is an interface to the CGAL library.
+    This has examples of "binary" operations, which are essentially CSG, e.g.,
+    Method `cgalMesh$intersection` on
+    https://github.com/stla/cgalMeshes/blob/main/man/cgalMesh.Rd
+    That is a fairly heavy dependency and, based on comments in the blog
+    post, there can be problems with that library, BUT this package
+    claims to be a more stable offering.
+    There is also CGALs slightly restrictive licence ?
+  </p>
+    VCG presumably also can do CSG ?  though a brief search
+    did not turn up much ...
+
+    ... only functions that test for intersecting (triangular) faces ...
+  <pre>
+    http://vcg.isti.cnr.it/vcglib/trimesh__intersection__mesh_8cpp_source.html
+    http://vcg.isti.cnr.it/vcglib/classvcg_1_1tri_1_1Clean.html#a8ea700d7187c15ea11c460ae03fc2c0e
+    http://vcg.isti.cnr.it/vcglib/classvcg_1_1tri_1_1Clean.html#a303f08dfdd7006b2191dc9bc346708ba
+  </pre>
+  <p>
+    ... and an example that splits a sphere in two using a plane, but
+    that appears far from straightforward (nor general) ...
+
+    http://vcg.isti.cnr.it/vcglib/trimesh__intersection__plane_8cpp_source.html
+  </p>
+  -->
+  <p>
+    Another interesting package is 'isocubes' 
+    (<a href="#pkg:isocubes"/>). This is limited to
+    isometric renderings of 3D cubes, but it includes the concept
+    of <em>signed distance fields</em> (SDF; 
+    or <a href="https://en.wikipedia.org/wiki/Signed_distance_function">signed
+    distance functions</a>), which appear to be
+    FRep by another name.
+  </p>
+  <!--
+  <pre>
+    https://coolbutuseless.github.io/2022/07/01/isocubes-v0.1.2-update-with-signed-distance-fields/
+  </pre>
+  <pre>
+    https://iquilezles.org/articles/distfunctions/
+    https://www.ronja-tutorials.com/post/034-2d-sdf-basics/
+    https://www.ronja-tutorials.com/post/035-2d-sdf-combination/
+  </pre>
+  -->
+
+  <h3>Future work</h3>
+  <p>
+    There are several areas where the 'hyperfun' package could be
+    worked on further.  For a start, there are still FRep library
+    functions in HyperFun that have no R function counterpart,
+    e.g., <code>hfMetaball</code> for describing metaballs 
+    (<a href="#metaballs"/>)
+    and <code>hfSoft</code> for describing soft objects 
+    (<a href="#softobj"/>).
+    These absences also include functions for transforming 
+    objects such as translation and rotation, but also stretching
+    and twisting.
+  </p>
+  <p>
+
+  </p>
+  <p>
+    The HyperFun language also allows for specifying attributes of
+    3D objects, such as colours and material properties, but there
+    is currently no way to access this from 'hyperfun'.
+  </p>
+  <p>
+    If the parallels between FRep and SDF hold true then
+    it would be worthwhile exploring further transformations 
+    beyond what already exists in the FRep library, such as
+    champfers and border grooves.
+  </p>
+  <p>
+    Finally, an interface to a more modern system like ImplicitCAD
+    could be explored.
+  </p>
+
+  <h2><a name="requirements">Technical requirements</a></h2>
+  <p>
+    The examples and discussion in this report relate to 
+    version 0.1-0 of the 'hyperfun' package.
+  </p>
+  <p>
+    This report was generated within a Docker container
+    (see <a href="#Resources">Resources</a> section below).
+  </p>
+
+  <h2><a name="Resources">Resources</a></h2>
+  <ul>
+    <li>
+      The <a href="hyperfun.cml">raw source file</a> for this
+      report, a <a href="hyperfun.xml">valid XML</a>
+      transformation of the source file, a <a
+      href="hyperfun.Rhtml">'knitr' document</a> generated from
+      the XML file, 
+      two <a href="toc.R">R</a> <a href="bib.R">files</a> and
+      the <a href="hyperfun.bib">bibtex file</a>
+      that are used to generate the table of contents and reference sections,
+      two <a href="common.xsl">XSL</a> <a
+      href="knitr.xsl">files</a> and an 
+      <a href="knit.R">R file</a> that are used to transform the XML to
+      the 'knitr' document, and a <a href="Makefile">Makefile</a> that
+      contains code for the other transformations and coordinates
+      everything.  
+      These materials are also available
+      on <a href="https://github.com/pmur002/hyperfun-report/releases/tag/v1">github</a>.
+    </li>
+    <li>
+      This report was generated within a 
+      <a href="https://www.docker.com/">Docker</a> container.
+      The Docker command to build the report is included in the Makefile above.
+      The Docker image for the container is available from
+      <a href="https://hub.docker.com/r/pmur002/hyperfun-report/">Docker Hub</a>;
+      alternatively, the image can be rebuilt from its 
+      <a href="Dockerfile">Dockerfile</a>.
+    </li>
+    <li>
+      The <a href="diagram.R">script</a> for the 
+      3D diagram in the <a href="#applications"/> Section.
+    </li>
+  </ul>
+
+  <h2>How to cite this report</h2>
+  <p>
+    Murrell, P. and Wong, J. (2022). "Constructive Solid Geometry and Function Representation in R" 
+    Technical Report 2022-??, Department of Statistics, The University of Auckland. 
+    Version 1.
+    [ <a href="how-to-cite.bib">bib</a> |
+      <a href="http://dx.doi.org/">DOI</a> | 
+      <a href="https://stattech.blogs.auckland.ac.nz/">http</a> ]
+  </p>
+
+  <h2><a name="references">References</a></h2>
+  <ul style="list-style-type: none">
+    <li>
+      <a name="R"/>
+    </li>
+    <li>
+      <a name="pkg:hyperfun"/>
+    </li>
+    <li>
+      <a name="HyperFunProject"/>
+    </li>
+    <li>
+      <a name="pkg:rgl"/>
+    </li>
+    <li>
+      <a name="Ware12"/>
+    </li>
+    <li>
+      <a name="cleveland-vis"/>
+    </li>
+    <li>
+      <a name="cleveland-elements"/>
+    </li>
+    <li>
+      <a name="pkg:rvcg"/>
+    </li>
+    <li>
+      <a name="pkg:cgalmesh"/>
+    </li>
+    <li>
+      <a name="pkg:meshtools"/>
+    </li>
+    <li>
+      <a name="pkg:polygonsoup"/>
+    </li>
+    <li>
+      <a name="pkg:isocubes"/>
+    </li>
+    <li>
+      <a name="metaballs"/>
+    </li>
+    <li>
+      <a name="softobj"/>
+    </li>
+  </ul>
+
+  <hr/>
+  <p>
+    <a rel="license"
+    href="http://creativecommons.org/licenses/by/4.0/"><img class="CC"
+    alt="Creative Commons License" style="border-width:0"
+    src="https://i.creativecommons.org/l/by/4.0/88x31.png"/></a><br/><span
+    xmlns:dct="http://purl.org/dc/terms/"
+    property="dct:title">This document</span>
+    by <span xmlns:cc="http://creativecommons.org/ns#"
+    property="cc:attributionName">Paul
+    Murrell</span> is licensed under a <a rel="license"
+    href="http://creativecommons.org/licenses/by/4.0/">Creative
+    Commons Attribution 4.0 International License</a>.
+  </p>
+
+</body>
+</html>

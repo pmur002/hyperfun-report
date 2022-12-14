@@ -1,0 +1,6 @@
+my_sphere(x[3], a[1])
+{
+    array centre[3];
+    centre = [0, 0, 0];
+    my_sphere = hfSphere(x, centre, 5);
+}

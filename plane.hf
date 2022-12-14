@@ -1,0 +1,4 @@
+my_model(x[3], a[1])
+{
+  my_model = x[1];
+}

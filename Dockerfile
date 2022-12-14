@@ -1,0 +1,55 @@
+
+# Base image
+FROM ubuntu:20.04
+MAINTAINER Paul Murrell <paul@stat.auckland.ac.nz>
+
+# add CRAN PPA
+RUN apt-get update && apt-get install -y apt-transport-https gnupg ca-certificates software-properties-common dirmngr
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+RUN add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu focal-cran40/'
+
+# Install additional software
+# R stuff
+RUN apt-get update && apt-get install -y \
+    r-base=4.2* 
+
+# Install additional software
+# R stuff
+RUN apt-get update && apt-get install -y \
+    xsltproc \
+    libxml2-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    bibtex2html \
+    subversion \
+    libgit2-dev
+
+# For building the report
+RUN apt-get update && apt-get install -y libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev
+RUN Rscript -e 'install.packages(c("knitr", "devtools"), repos="https://cran.rstudio.com/")'
+RUN Rscript -e 'library(devtools); install_version("xml2", "1.3.3", repos="https://cran.rstudio.com/")'
+RUN apt-get update && apt-get install -y libpoppler-cpp-dev libmagick++-dev
+RUN Rscript -e 'library(devtools); install_version("gdiff", "0.2-4", repos="https://cran.rstudio.com/")'
+
+# Packages used in the report
+# RUN add-apt-repository ppa:c2d4u.team/c2d4u4.0+
+# RUN apt-get update && apt-get install -y r-cran-rgl
+RUN apt-get update && apt-get install -y xorg-dev libglu1-mesa-dev
+RUN Rscript -e 'library(devtools); install_version("rgl", "0.109.6", repos="https://cran.rstudio.com/")'
+RUN Rscript -e 'library(devtools); install_version("webshot2", "0.1.0", repos="https://cran.rstudio.com/")'
+RUN apt-get install -y wget
+RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+RUN apt-get install -y ./google-chrome-stable_current_amd64.deb
+RUN apt-get update && apt-get install -y pandoc 
+RUN Rscript -e 'library(devtools); install_version("mvtnorm", "1.1-3", repos="https://cran.rstudio.com/")'
+
+# Using COPY will update (invalidate cache) if the tar ball has been modified!
+COPY hyperfun_0.1-0.tar.gz /tmp/
+RUN R CMD INSTALL /tmp/hyperfun_0.1-0.tar.gz
+# To be replace with things like ...
+## RUN Rscript -e 'library(devtools); install_github("pmur002/hyperfun@v0.1-0")'
+
+RUN apt-get install -y locales && locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+
+ENV TERM dumb
