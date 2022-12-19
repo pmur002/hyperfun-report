@@ -44,10 +44,10 @@ RUN apt-get update && apt-get install -y pandoc
 RUN Rscript -e 'library(devtools); install_version("mvtnorm", "1.1-3", repos="https://cran.rstudio.com/")'
 
 # Using COPY will update (invalidate cache) if the tar ball has been modified!
-COPY hyperfun_0.1-0.tar.gz /tmp/
-RUN R CMD INSTALL /tmp/hyperfun_0.1-0.tar.gz
+# COPY hyperfun_0.1-0.tar.gz /tmp/
+# RUN R CMD INSTALL /tmp/hyperfun_0.1-0.tar.gz
 # To be replace with things like ...
-## RUN Rscript -e 'library(devtools); install_github("pmur002/hyperfun@v0.1-0")'
+RUN Rscript -e 'library(devtools); install_github("pmur002/hyperfun@v0.1-0")'
 
 RUN apt-get install -y locales && locale-gen en_US.UTF-8
 ENV LANG en_US.UTF-8

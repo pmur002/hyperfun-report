@@ -174,7 +174,7 @@ rglImage(cube - sphere, name="csg", obs=30)
     three-dimensional image.  For example, the following HyperFun code describes
     a sphere (centred at the origin, with a radius of 7), a cube (centred at the
     origin, with a width, height, and depth of 12), 
-    and an overall <strong>model</strong> that
+    and an overall <em>model</em> that
     consists of the sphere subtracted from the cube.
   </p>
     <rcode echo="FALSE"><![CDATA[
@@ -210,7 +210,7 @@ model <- cube - sphere
     <p>
     The <code>hfp()</code> function calls the HyperFun program <code>hfp</code>
     to calculate the resulting image and then
-    draws the image using the 'rgl' package (<a href="pkg:rgl"/>).
+    draws the image using the 'rgl' package (<a href="#pkg:rgl">Murdoch and Adler, 2022</a>).
   </p>
     <rcode eval="FALSE"><![CDATA[
 hfp(model)
@@ -589,7 +589,7 @@ stlFile
   ]]></rcode>
     <p>
     Any further arguments are passed to <code>rgl::readSTL()</code>
-    (if <code>format="rgl"</code>).  For example, the following code
+    (when <code>format="rgl"</code>).  For example, the following code
     specifies a surface colour and a specular colour for rendering.
   </p>
     <rcode eval="FALSE"><![CDATA[
@@ -820,7 +820,9 @@ rglImage(paraboloid, "parabola-R")
     and all of its extension packages.  This 
     greatly expands the sort of surface that we can easily express
     in FRep.  
-    For example, the following code draws a multivariate normal surface.
+    For example, the following code draws a multivariate normal surface
+    using the <code>dmvnorm()</code> function from the 'mvtnorm' package
+    (<a href="#pkg:mvtnorm">Genz and Bretz, 2009</a>).
   </p>
     <rcode><![CDATA[
 library(mvtnorm)
@@ -900,6 +902,15 @@ rglImage(saddle, "saddle")
     <p>
       <img src="diagram.png" width="400" alt="3D image showing the intersection of three linear inequalities"/>
     </p>
+    <p>
+    Of course, 'hyperfun' does not have to be used for statistical applications.
+    Given a 3D printer, 
+    we can even use it to produce real world objects, such as the dice below.
+  </p>
+    <p>
+      <img src="dice.png" width="200" alt="Dice model"/>
+      <img src="dice-real.png" width="200" alt="Dice printed"/>
+    </p>
     <h2>
       <a name="discussion">5. Discussion</a>
     </h2>
@@ -968,7 +979,8 @@ rglImage(saddle, "saddle")
     <p>
     Some care is required to make sure that the resolution of the
     regular grid is sufficiently high to capture all details of
-    3D objects.  Even something as simple as a plane can disappear 
+    3D objects.  Even something as simple as a plane can be represented 
+    poorly or even disappear 
     in the final rendering
     if the plane is aligned with one of the main axes, but is not
     aligned with the regular grid.
@@ -1031,7 +1043,7 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
     and to integrate R expressions with the HyperFun language (via
     the <code>hfR()</code> function),
     the 'hyperfun' package provides a nice low-dependency, high-level
-    interface for working with CSG and FRep.
+    interface for working with CSG and FRep in R.
   </p>
     <p>
     Several R packages provide interfaces to much larger and more complex
@@ -1039,13 +1051,13 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
     and even if they provide CSG they do not
     support FRep.  For example, the 'rgl' package
     provides an interface to 
-    <a hfref="https://en.wikipedia.org/wiki/OpenGL">OpenGL</a> and the 
+    <a href="https://en.wikipedia.org/wiki/OpenGL">OpenGL</a> and the 
     'Rvcg' package (<a href="#pkg:rvcg">Schlager, 2017</a>) 
     provides an interface to the 
     <a href="https://github.com/cnr-isti-vclab/vcglib">VCG computer graphics library</a>.
     There are also several packages that provide at least limited
     interfaces to the <a href="https://www.cgal.org/">CGAL graphics library</a>:
-    'cgalMesh' (<a href="#pkg:cgalmesh">NA</a>), 
+    'cgalMesh' (<a href="#pkg:cgalmesh">Laurent, 2022a</a>), 
     'MeshesTools' (<a href="#pkg:meshtools">Laurent, 2022b</a>),
     and 'PolygonSoup' (<a href="#pkg:polygonsoup">Laurent, 2022c</a>).
   </p>
@@ -1116,7 +1128,7 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
     and <code>hfSoft</code> for describing soft objects 
     (<a href="#softobj">Wyvill et al., 1986</a>).
     These absences also include functions for transforming 
-    objects such as translation and rotation, but also stretching
+    objects such as translation and rotation, plus also stretching
     and twisting.
   </p>
     <p>
@@ -1185,11 +1197,11 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
     <h2>How to cite this report</h2>
     <p>
     Murrell, P. and Wong, J. (2022). "Constructive Solid Geometry and Function Representation in R" 
-    Technical Report 2022-??, Department of Statistics, The University of Auckland. 
+    Technical Report 2022-04, Department of Statistics, The University of Auckland. 
     Version 1.
     [ <a href="how-to-cite.bib">bib</a> |
-      <a href="http://dx.doi.org/">DOI</a> | 
-      <a href="https://stattech.blogs.auckland.ac.nz/">http</a> ]
+      <a href="http://dx.doi.org/10.17608/k6.auckland.21747875">DOI</a> | 
+      <a href="https://stattech.blogs.auckland.ac.nz/2022/12/19/2022-04-constructive-solid-geometry-and-function-representation-in-r">http</a> ]
   </p>
     <h2>
       <a name="references">8. References</a>
@@ -1201,7 +1213,7 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
 Adzhiev, V., Cartwright, R., Fausett, E., Ossipov, A., Pasko, A., and
   Savchenko, V. (2002).
  Hyperfun project: A framework for collaborative multidimensional
-  f-rep modeling.
+  F-rep modeling.
  <em>Implicit Surfaces '99, Eurographics/ACM SIGGRAPH Workshop</em>.
 [ <a href="hyperfun-bib_bib.html#HyperFunProject">bib</a> ]
 
@@ -1233,13 +1245,25 @@ Cleveland, W. S. (1993 - 1993).
 
 
 <dt>
-[<a name="pkg:cglmesh">Laurent, 2022a</a>]
+[<a name="pkg:mvtnorm">Genz and Bretz, 2009</a>]
+</dt>
+<dd>
+Genz, A. and Bretz, F. (2009).
+ <em>Computation of Multivariate Normal and t Probabilities</em>.
+ Lecture Notes in Statistics. Springer-Verlag, Heidelberg.
+[ <a href="hyperfun-bib_bib.html#pkg:mvtnorm">bib</a> ]
+
+</dd>
+
+
+<dt>
+[<a name="pkg:cgalmesh">Laurent, 2022a</a>]
 </dt>
 <dd>
 Laurent, S. (2022a).
  <em>cgalMeshes: R6 Based Utilities for 3D Meshes using CGAL</em>.
  R package version 1.0.0.
-[ <a href="hyperfun-bib_bib.html#pkg:cglmesh">bib</a> | 
+[ <a href="hyperfun-bib_bib.html#pkg:cgalmesh">bib</a> | 
 <a href="https://CRAN.R-project.org/package=cgalMeshes">http</a> ]
 
 </dd>

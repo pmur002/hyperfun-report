@@ -155,7 +155,7 @@ erfun.org/hyperfun/main">HyperFun project</a>
     three-dimensional image.  For example, the following HyperFun code describes
     a sphere (centred at the origin, with a radius of 7), a cube (centred at the
     origin, with a width, height, and depth of 12), 
-    and an overall <str>model</str> that
+    and an overall <em>model</em> that
     consists of the sphere subtracted from the cube.
   </p>
   <rcode echo="FALSE">
@@ -191,7 +191,7 @@ model <- cube - sphere
   <p>
     The <code>hfp()</code> function calls the HyperFun program <code>hfp</code>
     to calculate the resulting image and then
-    draws the image using the 'rgl' package (<a href="pkg:rgl"/>).
+    draws the image using the 'rgl' package (<a href="#pkg:rgl"/>).
   </p>
   <rcode eval="FALSE">
 hfp(model)
@@ -559,7 +559,7 @@ stlFile
 
   <p>
     Any further arguments are passed to <code>rgl::readSTL()</code>
-    (if <code>format="rgl"</code>).  For example, the following code
+    (when <code>format="rgl"</code>).  For example, the following code
     specifies a surface colour and a specular colour for rendering.
   </p>
   <rcode eval="FALSE">
@@ -804,7 +804,9 @@ rglImage(paraboloid, "parabola-R")
     and all of its extension packages.  This 
     greatly expands the sort of surface that we can easily express
     in FRep.  
-    For example, the following code draws a multivariate normal surface.
+    For example, the following code draws a multivariate normal surface
+    using the <code>dmvnorm()</code> function from the 'mvtnorm' package
+    (<a href="#pkg:mvtnorm"/>).
   </p>
   <rcode>
 library(mvtnorm)
@@ -886,6 +888,16 @@ rglImage(saddle, "saddle")
     <img src="diagram.png" width="400"
          alt="3D image showing the intersection of three linear inequalities"/>
   </p>
+  <p>
+    Of course, 'hyperfun' does not have to be used for statistical applications.
+    Given a 3D printer, 
+    we can even use it to produce real world objects, such as the dice below.
+  </p>
+  <p>
+    <img src="dice.png" width="200" alt="Dice model"/>
+    <img src="dice-real.png" width="200" alt="Dice printed"/>
+  </p>
+  
 
   <h2><a name="discussion">Discussion</a></h2>
 
@@ -955,7 +967,8 @@ rglImage(saddle, "saddle")
   <p>
     Some care is required to make sure that the resolution of the
     regular grid is sufficiently high to capture all details of
-    3D objects.  Even something as simple as a plane can disappear 
+    3D objects.  Even something as simple as a plane can be represented 
+    poorly or even disappear 
     in the final rendering
     if the plane is aligned with one of the main axes, but is not
     aligned with the regular grid.
@@ -1019,7 +1032,7 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
     and to integrate R expressions with the HyperFun language (via
     the <code>hfR()</code> function),
     the 'hyperfun' package provides a nice low-dependency, high-level
-    interface for working with CSG and FRep.
+    interface for working with CSG and FRep in R.
   </p>
   <p>
     Several R packages provide interfaces to much larger and more complex
@@ -1027,7 +1040,7 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
     and even if they provide CSG they do not
     support FRep.  For example, the 'rgl' package
     provides an interface to 
-    <a hfref="https://en.wikipedia.org/wiki/OpenGL">OpenGL</a> and the 
+    <a href="https://en.wikipedia.org/wiki/OpenGL">OpenGL</a> and the 
     'Rvcg' package (<a href="#pkg:rvcg"/>) 
     provides an interface to the 
     <a href="https://github.com/cnr-isti-vclab/vcglib">VCG computer graphics library</a>.
@@ -1105,7 +1118,7 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
     and <code>hfSoft</code> for describing soft objects 
     (<a href="#softobj"/>).
     These absences also include functions for transforming 
-    objects such as translation and rotation, but also stretching
+    objects such as translation and rotation, plus also stretching
     and twisting.
   </p>
   <p>
@@ -1175,11 +1188,11 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
   <h2>How to cite this report</h2>
   <p>
     Murrell, P. and Wong, J. (2022). "Constructive Solid Geometry and Function Representation in R" 
-    Technical Report 2022-??, Department of Statistics, The University of Auckland. 
+    Technical Report 2022-04, Department of Statistics, The University of Auckland. 
     Version 1.
     [ <a href="how-to-cite.bib">bib</a> |
-      <a href="http://dx.doi.org/">DOI</a> | 
-      <a href="https://stattech.blogs.auckland.ac.nz/">http</a> ]
+      <a href="http://dx.doi.org/10.17608/k6.auckland.21747875">DOI</a> | 
+      <a href="https://stattech.blogs.auckland.ac.nz/2022/12/19/2022-04-constructive-solid-geometry-and-function-representation-in-r">http</a> ]
   </p>
 
   <h2><a name="references">References</a></h2>
@@ -1225,6 +1238,9 @@ xyplot(times ~ dens, timings, groups=timings$nobj, type="b",
     </li>
     <li>
       <a name="softobj"/>
+    </li>
+    <li>
+      <a name="pkg:mvtnorm"/>
     </li>
   </ul>
 
